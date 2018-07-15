@@ -17,69 +17,143 @@ exports.setupUserDbEntires = functions.auth.user().onCreate((user) => {
 
 // firebase deploy --only functions// Declaration of function. "Notifications" can be change to already exisiting function
 // so that all required information can be grabbed.
-exports.sendNotification = functions.database.ref('/connection_requests/{requestedUid}/{requesterUid}')
-    .onWrite((change, context) => {
-      const requesterUid = context.params.requesterUid;
-      const requestedUid = context.params.requestedUid;
-      console.log('sendNotification called: requesterUid ', requesterUid, ' requestedUid: ', requestedUid);
+exports.sendConnectionNotification = functions.database.ref('/connection_requests/{requestedUid}/{requesterUid}')
+	.onWrite((change, context) => {
+		if (!change.after.exists()) {
+			console.log('Triggered by database delete');
+        	return null;
+      	}
+      	const status = change.after.val();
+      	const requesterUid = context.params.requesterUid;
+      	const requestedUid = context.params.requestedUid;
 
-      // Get the list of device notification tokens.
-      const deviceToken = admin.database().ref(`/fcm_tokens/${requestedUid}`).once('value');
-      console.log('deviceToken: ', deviceToken);
+      	if (status === false){
+      		console.log("Connection request submitted.");
+      		console.log('sendNotification called: requesterUid ', requesterUid, ' requestedUid: ', requestedUid, ' status: ', status);
+	      	// Get the list of device notification tokens.
+	      	const deviceToken = admin.database().ref(`/fcm_tokens/${requestedUid}`).once('value');
+	      	console.log('deviceToken: ', deviceToken);
 
-      // Get the follower profile.
-      const getRequesterProfilePromise = admin.auth().getUser(requesterUid);
-      console.log('getRequesterProfilePromise: ', getRequesterProfilePromise);
+	      	// Get the follower profile.
+	      	const requesterProfile = admin.auth().getUser(requesterUid);
+	      	console.log('requesterProfile: ', requesterProfile);
 
-      // The snapshot to the user's tokens.
-      let tokensSnapshot;
+	      	// The snapshot to the user's tokens.
+	      	let tokenSnapshot;
 
-      // The array containing all the user's tokens.
-      let tokens;
+	      	// The array containing all the user's tokens.
+	      	let token;
 
-	      return Promise.all([deviceToken, getRequesterProfilePromise]).then(results => {
-	        tokensSnapshot = results[0];
-	        console.log('tokensSnapshot: ', tokensSnapshot);
+			return Promise.all([deviceToken, requesterProfile]).then(results => {
+				tokenSnapshot = results[0];
+		        console.log('tokensSnapshot: ', tokenSnapshot);
 
-	        const requester = results[1];
-	        console.log('requester: ', requester);
+		        const requester = results[1];
+		        console.log('requester: ', requester);
 
-	        // Check if there are any device tokens.
-	        //if (!tokensSnapshot.hasChildren()) {
-	        //  return console.log('There are no notification tokens to send to.');
-	        //}
-	        console.log('There are', tokensSnapshot.numChildren(), 'tokens to send notifications to.');
-	        console.log('Fetched follower profile', requester);
+		        token = tokenSnapshot.val();
+		        console.log('token: ', token);
 
-	        // Listing all tokens as an array.
-	        //tokens = Object.keys(tokensSnapshot.val());
-	        tokens = tokensSnapshot.val();
+		        // Check if there are any device tokens.
+		        if (token === null) {
+					return console.log('There is no notification token to send to.');
+		        }
 
-			// Notificaiton payload, does appear that additional informaiton can be sent to
-			// that this relevant to the logged in user.
-			var payload = {	
-			data:{
-				username: "users_username",
-				email: "users_email"
-			},
-			notification: {
-				title: 'You have a new follower!',
-				body: `${requester.displayName} is now following you.`
-			}
-			};
+		        const firstNameToken = admin.database().ref(`/user_profile/${requesterUid}/first_name`).once('value');
+		        return Promise.all([firstNameToken, requesterProfile]).then(results => {
+					const firstName = results[0].val();
 
-	        console.log('tokens: ', tokens);
-	        console.log('tokensSnapshot.val(): ', tokensSnapshot.val());
-	        console.log('payload', payload);
+					const secondNameToken = admin.database().ref(`/user_profile/${requesterUid}/second_name`).once('value');
+					return Promise.all([secondNameToken, requesterProfile]).then(results => {
+						const secondName = results[0].val();
+
+						// Notificaiton payload, does appear that additional informaiton can be sent to
+						// that this relevant to the logged in user.
+						var payload = {	
+							notification: {
+								title: 'You have a new connection request!',
+								body: `${firstName} ${secondName} wants to connect with you.`
+							}
+						};
+				        console.log('payload', payload);
 
 
-		// Send notifications to all tokens.
-		return admin.messaging().sendToDevice(tokens, payload)
-		  .then(function(response){
-		    return console.log("Successfully sent message: ", response);
-		  })
-		  .catch(function(error){
-		    console.log("Error sending message: ", error);
-		  });
-	});
-});
+						// Send notifications to all tokens.
+						return admin.messaging().sendToDevice(token, payload)
+							.then(function(response){
+								return console.log("Successfully sent message: ", response);
+					  	})
+					  	.catch(function(error){
+					    	console.log("Error sending message: ", error);
+					  	});
+					});		
+			  	});				
+			});
+      	} else if (status === true){
+      		// requested sending a notification to the requester
+
+      		console.log("Connection request accepted.");
+      		console.log('sendNotification called: requesterUid ', requesterUid, ' requestedUid: ', requestedUid, ' status: ', status);
+	      	// Get the list of device notification tokens.
+	      	const deviceToken = admin.database().ref(`/fcm_tokens/${requesterUid}`).once('value');
+	      	console.log('deviceToken: ', deviceToken);
+
+	      	// Get the follower profile.
+	      	const requestedProfile = admin.auth().getUser(requestedUid);
+	      	console.log('requestedProfile: ', requestedProfile);
+
+	      	// The snapshot to the user's tokens.
+	      	let tokenSnapshot;
+
+	      	// The array containing all the user's tokens.
+	      	let token;
+
+			return Promise.all([deviceToken, requestedProfile]).then(results => {
+				tokenSnapshot = results[0];
+		        console.log('tokensSnapshot: ', tokenSnapshot);
+
+		        const requested = results[1];
+		        console.log('requested: ', requested);
+
+		        token = tokenSnapshot.val();
+		        console.log('token: ', token);
+
+		        // Check if there are any device tokens.
+		        if (token === null) {
+					return console.log('There is no notification token to send to.');
+		        }
+
+		        const firstNameToken = admin.database().ref(`/user_profile/${requestedUid}/first_name`).once('value');
+		        return Promise.all([firstNameToken, requestedProfile]).then(results => {
+					const firstName = results[0].val();
+
+					const secondNameToken = admin.database().ref(`/user_profile/${requestedUid}/second_name`).once('value');
+					return Promise.all([secondNameToken, requestedProfile]).then(results => {
+						const secondName = results[0].val();
+
+						// Notificaiton payload, does appear that additional informaiton can be sent to
+						// that this relevant to the logged in user.
+						var payload = {	
+							notification: {
+								title: 'You have a new connection!',
+								body: `${firstName} ${secondName} accepted your request.`
+							}
+						};
+				        console.log('payload', payload);
+
+
+						// Send notifications to all tokens.
+						return admin.messaging().sendToDevice(token, payload)
+							.then(function(response){
+								return console.log("Successfully sent message: ", response);
+					  	})
+					  	.catch(function(error){
+					    	console.log("Error sending message: ", error);
+					  	});
+					});		
+			  	});				
+			});
+      	} 
+	}
+);
+

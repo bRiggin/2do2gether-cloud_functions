@@ -1,5 +1,11 @@
 {
   "projects": {
+<<<<<<< HEAD
     "todotogether": "do-2gether"
   }
 }
+=======
+    "default": "do-2gether"
+  }
+}
+>>>>>>> 6596587a24ff8db3a760ec18f310e1c71ba7ee55

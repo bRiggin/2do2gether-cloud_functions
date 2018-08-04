@@ -71,7 +71,7 @@ exports.sendConnectionNotification = functions.database.ref('/connection_request
 						// that this relevant to the logged in user.
 						var payload = {	
 							notification: {
-								title: 'You have a new connection request!',
+								title: 'New connection request!',
 								body: `${firstName} ${secondName} wants to connect with you.`
 							}
 						};
@@ -97,6 +97,19 @@ exports.sendConnectionNotification = functions.database.ref('/connection_request
 	      	// Get the list of device notification tokens.
 	      	const deviceToken = admin.database().ref(`/fcm_tokens/${requesterUid}`).once('value');
 	      	console.log('deviceToken: ', deviceToken);
+
+	      	//
+	      	admin.database().ref(`/connections/${requesterUid}`).push(requestedUid);
+	      	admin.database().ref(`/connections/${requestedUid}`).push(requesterUid);
+	      	
+
+			var adaRef = admin.database().ref(`/connection_requests/${requestedUid}/${requesterUid}`);
+			adaRef.remove().then(function() {
+				return console.log("Remove succeeded.")
+			})
+			.catch(function(error) {
+				console.log("Remove failed: " + error.message)
+			});
 
 	      	// Get the follower profile.
 	      	const requestedProfile = admin.auth().getUser(requestedUid);
@@ -135,7 +148,7 @@ exports.sendConnectionNotification = functions.database.ref('/connection_request
 						// that this relevant to the logged in user.
 						var payload = {	
 							notification: {
-								title: 'You have a new connection!',
+								title: 'New connection!',
 								body: `${firstName} ${secondName} accepted your request.`
 							}
 						};

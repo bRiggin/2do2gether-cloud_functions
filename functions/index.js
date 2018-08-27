@@ -9,9 +9,9 @@ admin.initializeApp();
 // [START onCreateTrigger]
 exports.setupUserDbEntires = functions.auth.user().onCreate((user) => {
 	const text = "";
-	admin.database().ref(`/user_profile/${user.uid}`).update({ first_name: text, second_name: text, nickname: text, discoverable: false});
-	admin.database().ref(`/user_settings/${user.uid}`).update({ notification_connection_requests: true, notification_new_connections: true, 
-																notification_new_lists: true, notification_new_items: true});
+	admin.database().ref(`/user_profile/${user.uid}`).update({ first_name: text, second_name: text, nickname: text, profile_public: true, discoverable: false});
+	admin.database().ref(`/user_settings/${user.uid}`).update({ profile_public: true, notification_connection_requests: true, notification_new_connections: true, 
+																notification_new_lists: true});
 });
 
 
@@ -73,6 +73,9 @@ exports.sendConnectionNotification = functions.database.ref('/connection_request
 							notification: {
 								title: 'New connection request!',
 								body: `${firstName} ${secondName} wants to connect with you.`
+							},
+							data:{
+								type: 'connection_request'
 							}
 						};
 				        console.log('payload', payload);
@@ -103,7 +106,7 @@ exports.sendConnectionNotification = functions.database.ref('/connection_request
 	      	admin.database().ref(`/connections/${requestedUid}`).push(requesterUid);
 	      	
 
-			var adaRef = admin.database().ref(`/connection_requests/${requestedUid}/${requesterUid}`);
+			var adaRef = admin.database().ref(`/connection_requests/${requesterUid}/${requesterUid}`);
 			adaRef.remove().then(function() {
 				return console.log("Remove succeeded.")
 			})
@@ -150,6 +153,9 @@ exports.sendConnectionNotification = functions.database.ref('/connection_request
 							notification: {
 								title: 'New connection!',
 								body: `${firstName} ${secondName} accepted your request.`
+							},
+							data:{
+								type: 'new_connection'
 							}
 						};
 				        console.log('payload', payload);

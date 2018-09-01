@@ -8,10 +8,17 @@ admin.initializeApp();
  */
 // [START onCreateTrigger]
 exports.setupUserDbEntires = functions.auth.user().onCreate((user) => {
+	var newChecklistKey = admin.database().ref(`/checklist/${user.uid}/`).push().key;
+
 	const text = "";
 	admin.database().ref(`/user_profile/${user.uid}`).update({ first_name: text, second_name: text, nickname: text, profile_public: true, discoverable: false});
 	admin.database().ref(`/user_settings/${user.uid}`).update({ profile_public: true, notification_connection_requests: true, notification_new_connections: true, 
-																notification_new_lists: true});
+																notification_new_lists: true, reorder_to_do_lists: true, analytics_enabled: false});
+
+	admin.database().ref(`/checklists/${user.uid}/${newChecklistKey}`).update({ title: 'My First Checklist'});
+	admin.database().ref(`/checklists/${user.uid}/${newChecklistKey}/items`).push('Welcome to checklists');
+	admin.database().ref(`/checklists/${user.uid}/${newChecklistKey}/items`).push('Checklists can be repeatably published as 2Do lists');
+	admin.database().ref(`/checklists/${user.uid}/${newChecklistKey}/items`).push('And are therefore perfect for those everyday errands');
 });
 
 

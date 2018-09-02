@@ -9,6 +9,7 @@ admin.initializeApp();
 // [START onCreateTrigger]
 exports.setupUserDbEntires = functions.auth.user().onCreate((user) => {
 	var newChecklistKey = admin.database().ref(`/checklist/${user.uid}/`).push().key;
+	var newToDoListKey = admin.database().ref(`/to_do_lists/`).push().key;
 
 	const text = "";
 	admin.database().ref(`/user_profile/${user.uid}`).update({ first_name: text, second_name: text, nickname: text, profile_public: true, discoverable: false});
@@ -19,6 +20,24 @@ exports.setupUserDbEntires = functions.auth.user().onCreate((user) => {
 	admin.database().ref(`/checklists/${user.uid}/${newChecklistKey}/items`).push('Welcome to checklists');
 	admin.database().ref(`/checklists/${user.uid}/${newChecklistKey}/items`).push('Checklists can be repeatably published as 2Do lists');
 	admin.database().ref(`/checklists/${user.uid}/${newChecklistKey}/items`).push('And are therefore perfect for those everyday errands');
+
+	admin.database().ref(`/to_do_lists/${newToDoListKey}`).update({ list_title: 'My First 2Do List', creator: `${user.uid}` });
+	admin.database().ref(`/to_do_lists/${newToDoListKey}/items`).push({item_description: 'Check off items using the tick box', 
+																	   creator: `${user.uid}`,
+																	   status: false});
+	admin.database().ref(`/to_do_lists/${newToDoListKey}/items`).push({item_description: 'Edit items using by holding on their description', 
+																	   creator: `${user.uid}`,
+																	   status: false});
+	admin.database().ref(`/to_do_lists/${newToDoListKey}/items`).push({item_description: 'See who completed an item by expanding the tile', 
+																	   creator: `${user.uid}`,
+																	   completed_by: `${user.uid}`,
+																	   status: true});
+	admin.database().ref(`/to_do_lists/${newToDoListKey}/items`).push({item_description: 'Permantly delete items using the x button', 
+																	   creator: `${user.uid}`,
+																	   status: false});
+
+	admin.database().ref(`/to_do_lists_references/${user.uid}/`).push(`${newToDoListKey}`);
+	
 });
 
 
